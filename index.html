@@ -1,0 +1,1295 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fact or Flash-Fib?</title>
+    <!-- Load Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Use Inter font -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+        /* Simple loading spinner */
+        .spinner {
+            border: 4px solid rgba(0, 0, 0, 0.1);
+            border-left-color: #4f46e5;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+        /* Wiggle animation for empty input */
+        @keyframes wiggle {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-5px); }
+            75% { transform: translateX(5px); }
+        }
+        /* NEW Speaker Button styles */
+        .speaker-btn {
+            background: none;
+            border: none;
+            cursor: pointer;
+            padding: 4px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background-color 0.2s;
+            vertical-align: middle; /* Align with text */
+        }
+        .speaker-btn:hover {
+            background-color: rgba(0, 0, 0, 0.1);
+        }
+        .speaker-btn svg {
+            width: 20px;
+            height: 20px;
+            fill: #4f46e5;
+        }
+        .speaker-btn.speaking svg {
+            fill: #d946ef; /* A pink/purple color */
+            animation: pulse 1s infinite;
+        }
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+    </style>
+</head>
+<body class="bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 min-h-screen flex items-center justify-center p-4">
+
+    <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl p-6 md:p-8 transition-all duration-500">
+        
+        <!-- === Topic Selection Screen === -->
+        <div id="topic-screen">
+            <h1 class="text-3xl font-bold text-center text-gray-800 mb-2">Fact or Flash-Fib?</h1>
+            <p class="text-center text-gray-600 mb-6">Enter a topic you want to learn about!</p>
+            <div class="space-y-4">
+                <input type="text" id="topicInput" placeholder="e.g., 'Ancient Rome' or 'Marine Biology'" class="w-full px-4 py-3 border border-gray-300 rounded-lg text-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                <!-- NEW BUTTON -->
+                <button id="suggestTopicButton" class="w-full bg-purple-600 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                    ✨ Suggest a Fun Topic!
+                </button>
+                <button id="startButton" class="w-full bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                    Start Game
+                </button>
+            </div>
+            <p id="topic-error" class="text-red-500 text-center mt-2 h-4"></p>
+        </div>
+
+        <!-- === Game Screen === -->
+        <div id="game-screen" class="hidden">
+            <!-- Stats Bar -->
+            <div class="flex justify-between items-center mb-4 p-3 bg-gray-100 rounded-lg">
+                <div class="text-lg">
+                    <span class="font-bold text-indigo-600">Topic:</span>
+                    <span id="topic-display" class="font-semibold text-gray-700"></span>
+                </div>
+                <div class="flex space-x-4 text-lg">
+                    <div>
+                        <span class="font-bold text-green-600">Score:</span>
+                        <span id="score-display" class="font-semibold">0</span>
+                    </div>
+                    <div>
+                        <span class="font-bold text-red-600">Lives:</span>
+                        <span id="lives-display" class="font-semibold">3</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Statement Card -->
+            <div id="statementCard" class="min-h-[150px] bg-indigo-50 border-2 border-indigo-200 rounded-lg p-6 flex items-center justify-center text-center relative">
+                <p id="statementText" class="text-xl font-medium text-gray-800"></p>
+                <div id="loadingSpinner" class="spinner hidden"></div>
+                <!-- NEW Speaker Button -->
+                <button id="speak-statement" class="speaker-btn absolute top-2 right-2 hidden" data-text-id="statementText">
+                    <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
+                </button>
+            </div>
+
+            <!-- Answer Buttons -->
+            <div id="button-container" class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <button id="factButton" class="w-full bg-green-500 text-white font-bold py-4 px-6 rounded-lg text-xl hover:bg-green-600 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                    ✅ Fact
+                </button>
+                <button id="fibButton" class="w-full bg-red-500 text-white font-bold py-4 px-6 rounded-lg text-xl hover:bg-red-600 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                    ❌ Fib
+                </button>
+            </div>
+
+            <!-- Feedback Area -->
+            <div id="feedback-area" class="mt-4 text-center hidden">
+                <h2 id="feedback-title" class="text-3xl font-bold"></h2>
+                <p id="feedback-explanation" class="text-lg text-gray-700 mt-2">
+                    <!-- Text will be injected here -->
+                    <!-- NEW Speaker Button -->
+                    <button id="speak-explanation" class="speaker-btn" data-text-id="feedback-explanation">
+                        <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
+                    </button>
+                </p>
+                <div class="mt-4 flex flex-col sm:flex-row gap-2 justify-center flex-wrap">
+                    <button id="nextButton" class="bg-indigo-600 text-white font-bold py-2 px-6 rounded-lg text-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105">
+                        Next
+                    </button>
+                    <!-- NEW "Explain Like I'm 5" Button -->
+                    <button id="explainSimpleButton" class="bg-teal-500 text-white font-bold py-2 px-6 rounded-lg text-lg hover:bg-teal-600 transition-all duration-300 transform hover:scale-105">
+                        ✨ Explain Like I'm 5
+                    </button>
+                    <!-- "Help Me Remember" Button -->
+                    <button id="mnemonicButton" class="bg-orange-500 text-white font-bold py-2 px-6 rounded-lg text-lg hover:bg-orange-600 transition-all duration-300 transform hover:scale-105 hidden">
+                        ✨ Help Me Remember
+                    </button>
+                    <!-- NEW "Visualize This" Button -->
+                    <button id="visualizeButton" class="bg-cyan-500 text-white font-bold py-2 px-6 rounded-lg text-lg hover:bg-cyan-600 transition-all duration-300 transform hover:scale-105 hidden">
+                        ✨ Visualize This!
+                    </button>
+                    <!-- NEW "Deeper Dive" Button -->
+                    <button id="deeperDiveButton" class="bg-blue-600 text-white font-bold py-2 px-6 rounded-lg text-lg hover:bg-blue-700 transition-all duration-300 transform hover:scale-105 hidden">
+                        ✨ Deeper Dive
+                    </button>
+                </div>
+                <!-- "Simple Explanation" Area -->
+                <div id="simple-explanation-area" class="mt-4 p-4 bg-gray-100 rounded-lg text-left hidden">
+                    <div id="simple-explanation-spinner" class="spinner mx-auto hidden"></div>
+                    <p id="simple-explanation-text" class="text-gray-800">
+                        <!-- Text will be injected here -->
+                        <!-- NEW Speaker Button -->
+                        <button id="speak-simple-explanation" class="speaker-btn" data-text-id="simple-explanation-text">
+                            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
+                        </button>
+                    </p>
+                </div>
+                <!-- "Mnemonic" Area -->
+                <div id="mnemonic-area" class="mt-4 p-4 bg-gray-100 rounded-lg text-left hidden">
+                    <div id="mnemonic-spinner" class="spinner mx-auto hidden"></div>
+                    <!-- UPDATED: Added speaker button wrapper -->
+                    <p id="mnemonic-text" class="text-gray-800">
+                        <!-- Text will be injected here -->
+                        <!-- NEW Speaker Button -->
+                        <button id="speak-mnemonic-text" class="speaker-btn" data-text-id="mnemonic-text">
+                            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
+                        </button>
+                    </p>
+                </div>
+                <!-- NEW "Image Gen" Area -->
+                <div id="image-gen-area" class="mt-4 p-4 bg-gray-100 rounded-lg text-center hidden">
+                    <div id="image-gen-spinner" class="spinner mx-auto hidden"></div>
+                    <img id="image-gen-element" class="w-full max-w-sm mx-auto rounded-lg shadow-md hidden" alt="Generated visualization">
+                    <p id="image-gen-error" class="text-red-500"></p>
+                </div>
+                <!-- NEW "Deeper Dive" Area -->
+                <div id="deeper-dive-area" class="mt-4 p-4 bg-gray-100 rounded-lg text-left hidden">
+                    <div id="deeper-dive-spinner" class="spinner mx-auto hidden"></div>
+                    <p id="deeper-dive-text" class="text-gray-800">
+                        <!-- Text will be injected here -->
+                        <button id="speak-deeper-dive" class="speaker-btn" data-text-id="deeper-dive-text">
+                            <svg viewBox="0 0 24 24"><path d="M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z"></path></svg>
+                        </button>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- === Game Over Screen === -->
+        <div id="game-over-screen" class="hidden text-center">
+            <h1 class="text-4xl font-bold text-gray-800 mb-4">Game Over!</h1>
+            <p class="text-2xl text-gray-700 mb-2">Your Final Score:</p>
+            <p id="final-score" class="text-6xl font-bold text-indigo-600 mb-8">0</p>
+            <button id="playAgainButton" class="w-full max-w-xs mx-auto bg-indigo-600 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-indigo-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                Play Again
+            </button>
+            <!-- "More Fun Facts" Button (Renamed) -->
+            <button id="funFactsButton" class="w-full max-w-xs mx-auto mt-4 bg-purple-600 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-purple-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                ✨ Get More Fun Facts!
+            </button>
+            <!-- NEW "Quick Challenge" Button -->
+            <button id="challengeButton" class="w-full max-w-xs mx-auto mt-4 bg-teal-600 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-teal-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                ✨ Quick Challenge!
+            </button>
+            <!-- NEW "Related Topics" Button -->
+            <button id="relatedTopicsButton" class="w-full max-w-xs mx-auto mt-4 bg-fuchsia-600 text-white font-bold py-3 px-6 rounded-lg text-lg hover:bg-fuchsia-700 transition-all duration-300 transform hover:scale-105 shadow-lg">
+                ✨ Find Related Topics
+            </button>
+            <!-- "More Fun Facts" Area (Renamed and Repurposed) -->
+            <div id="gemini-extra-area" class="mt-6 text-left p-4 bg-gray-100 rounded-lg hidden">
+                <div id="gemini-extra-spinner" class="spinner mx-auto hidden"></div>
+                <div id="gemini-extra-content" class="space-y-2 text-gray-700">
+                    <!-- Facts or Challenge UI will be injected here -->
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // --- DOM Elements ---
+        const topicScreen = document.getElementById('topic-screen');
+        const gameScreen = document.getElementById('game-screen');
+        const gameOverScreen = document.getElementById('game-over-screen');
+        
+        const topicInput = document.getElementById('topicInput');
+        const startButton = document.getElementById('startButton');
+        const suggestTopicButton = document.getElementById('suggestTopicButton'); // New element
+        const topicError = document.getElementById('topic-error');
+        
+        const topicDisplay = document.getElementById('topic-display');
+        const scoreDisplay = document.getElementById('score-display');
+        const livesDisplay = document.getElementById('lives-display');
+        
+        const statementCard = document.getElementById('statementCard');
+        const statementText = document.getElementById('statementText');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        
+        const buttonContainer = document.getElementById('button-container');
+        const factButton = document.getElementById('factButton');
+        const fibButton = document.getElementById('fibButton');
+        
+        const feedbackArea = document.getElementById('feedback-area');
+        const feedbackTitle = document.getElementById('feedback-title');
+        const feedbackExplanation = document.getElementById('feedback-explanation');
+        const nextButton = document.getElementById('nextButton');
+        
+        // NEW "Explain Like I'm 5" Elements
+        const explainSimpleButton = document.getElementById('explainSimpleButton');
+        const simpleExplanationArea = document.getElementById('simple-explanation-area');
+        const simpleExplanationSpinner = document.getElementById('simple-explanation-spinner');
+        const simpleExplanationText = document.getElementById('simple-explanation-text');
+
+        // NEW "Mnemonic" Elements
+        const mnemonicButton = document.getElementById('mnemonicButton');
+        const mnemonicArea = document.getElementById('mnemonic-area');
+        const mnemonicSpinner = document.getElementById('mnemonic-spinner');
+        const mnemonicText = document.getElementById('mnemonic-text');
+
+        // NEW "Visualize This" Elements
+        const visualizeButton = document.getElementById('visualizeButton');
+        const imageGenArea = document.getElementById('image-gen-area');
+        const imageGenSpinner = document.getElementById('image-gen-spinner');
+        const imageGenElement = document.getElementById('image-gen-element');
+        const imageGenError = document.getElementById('image-gen-error');
+
+        // NEW "Deeper Dive" Elements
+        const deeperDiveButton = document.getElementById('deeperDiveButton');
+        const deeperDiveArea = document.getElementById('deeper-dive-area');
+        const deeperDiveSpinner = document.getElementById('deeper-dive-spinner');
+        const deeperDiveText = document.getElementById('deeper-dive-text');
+
+        // NEW "TTS" Elements
+        const speakStatementButton = document.getElementById('speak-statement');
+        const speakExplanationButton = document.getElementById('speak-explanation');
+        const speakSimpleExplanationButton = document.getElementById('speak-simple-explanation');
+        const speakDeeperDiveButton = document.getElementById('speak-deeper-dive'); // New
+        const speakMnemonicTextButton = document.getElementById('speak-mnemonic-text'); // NEW
+        
+        const finalScore = document.getElementById('final-score');
+        const playAgainButton = document.getElementById('playAgainButton');
+
+        // "More Fun Facts" Elements (Renamed)
+        const funFactsButton = document.getElementById('funFactsButton');
+        const geminiExtraArea = document.getElementById('gemini-extra-area');
+        const geminiExtraSpinner = document.getElementById('gemini-extra-spinner');
+        const geminiExtraContent = document.getElementById('gemini-extra-content');
+        
+        // NEW "Quick Challenge" Elements
+        const challengeButton = document.getElementById('challengeButton');
+        
+        // NEW "Related Topics" Elements
+        const relatedTopicsButton = document.getElementById('relatedTopicsButton');
+
+        // --- Game State ---
+        let score = 0;
+        let lives = 3;
+        let streak = 0;
+        let currentTopic = '';
+        let currentStatement = {};
+        let currentChallengeQuestion = ''; // New state for challenge
+        let isLoading = false;
+        
+        // NEW "TTS" State
+        let isSpeaking = false;
+        let currentAudio = null;
+        let allSpeakerButtons = []; // To manage button states
+
+        // --- Gemini API Configuration ---
+        // This key is intentionally left blank.
+        // The environment will provide the API key.
+        const apiKey = ""; 
+        const textApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        // NEW API URLs
+        const imageApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-image-preview:generateContent?key=${apiKey}`;
+        const ttsApiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`;
+
+
+        const geminiSchema = {
+            type: "OBJECT",
+            properties: {
+                "statement": { "type": "STRING", "description": "The fact or fib statement." },
+                "isFact": { "type": "BOOLEAN", "description": "True if the statement is a fact, false if it is a fib." },
+                "explanation": { "type": "STRING", "description": "A brief explanation of why the statement is a fact or fib." }
+            },
+            required: ["statement", "isFact", "explanation"]
+        };
+        
+        // --- Event Listeners ---
+        startButton.addEventListener('click', startGame);
+        suggestTopicButton.addEventListener('click', getTopicSuggestion); // New listener
+        factButton.addEventListener('click', () => checkAnswer(true));
+        fibButton.addEventListener('click', () => checkAnswer(false));
+        nextButton.addEventListener('click', getNewStatement);
+        playAgainButton.addEventListener('click', resetGame);
+        
+        // Event Listeners
+        explainSimpleButton.addEventListener('click', getSimpleExplanation);
+        funFactsButton.addEventListener('click', getMoreFunFacts); // Renamed
+        mnemonicButton.addEventListener('click', getMnemonic); // New
+        challengeButton.addEventListener('click', getChallengeQuestion); // New
+        visualizeButton.addEventListener('click', getVisual); // New
+        deeperDiveButton.addEventListener('click', getDeeperDive); // New
+        relatedTopicsButton.addEventListener('click', getRelatedTopics); // New
+
+        // NEW TTS Listeners
+        speakStatementButton.addEventListener('click', handleSpeakRequest);
+        speakExplanationButton.addEventListener('click', handleSpeakRequest);
+        speakSimpleExplanationButton.addEventListener('click', handleSpeakRequest);
+        speakDeeperDiveButton.addEventListener('click', handleSpeakRequest); // New
+        speakMnemonicTextButton.addEventListener('click', handleSpeakRequest); // NEW
+        
+        // Store all speaker buttons for easy access
+        allSpeakerButtons = [speakStatementButton, speakExplanationButton, speakSimpleExplanationButton, speakDeeperDiveButton, speakMnemonicTextButton]; // NEW
+
+        topicInput.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                startGame();
+            }
+        });
+
+        // --- NEW FUNCTION: Get Topic Suggestion ---
+        async function getTopicSuggestion() {
+            // Show loading state
+            suggestTopicButton.disabled = true;
+            suggestTopicButton.textContent = 'Thinking...';
+            suggestTopicButton.classList.add('opacity-70');
+            topicError.textContent = ''; // Clear old errors
+
+            const systemPrompt = "You are an idea generator for a trivia game. Provide a list of 5 fun, interesting, and diverse topics suitable for all ages. Respond *only* in the requested JSON format.";
+            const userQuery = "Suggest 5 fun topics for a 'Fact or Fib' game.";
+            
+            const topicSuggestionSchema = {
+                type: "OBJECT",
+                properties: {
+                    "topics": {
+                        type: "ARRAY",
+                        items: { type: "STRING" },
+                        description: "A list of 5 interesting and fun topics for a trivia game."
+                    }
+                },
+                required: ["topics"]
+            };
+
+            try {
+                const response = await callGeminiAPI(systemPrompt, userQuery, topicSuggestionSchema);
+                const jsonText = response.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(jsonText);
+                
+                if (parsedResult.topics && parsedResult.topics.length > 0) {
+                    const suggestedTopic = parsedResult.topics[Math.floor(Math.random() * parsedResult.topics.length)];
+                    topicInput.value = suggestedTopic;
+                } else {
+                    topicError.textContent = 'Could not get a suggestion.';
+                }
+
+            } catch (error) {
+                console.error('Error fetching topic suggestion:', error);
+                topicError.textContent = 'Oops! Failed to get suggestions. Check console.';
+            } finally {
+                // Restore button state
+                suggestTopicButton.disabled = false;
+                suggestTopicButton.textContent = '✨ Suggest a Fun Topic!';
+                suggestTopicButton.classList.remove('opacity-70');
+            }
+        }
+
+        // --- NEW FUNCTION: Get Simple Explanation ---
+        async function getSimpleExplanation() {
+            if (isLoading) return; // Prevent spamming
+            
+            // Show loading state
+            isLoading = true;
+            explainSimpleButton.disabled = true;
+            explainSimpleButton.classList.add('opacity-70');
+            
+            // FIX: Change .textContent to .firstChild.textContent to avoid deleting the speaker button
+            simpleExplanationText.firstChild.textContent = ''; // <-- This line was fixed
+            
+            simpleExplanationArea.classList.remove('hidden');
+            simpleExplanationSpinner.classList.remove('hidden');
+
+            const systemPrompt = "You are a friendly teacher. Your job is to explain a concept in very simple terms, as if you were talking to a 5-year-old child. Be concise and friendly. Respond *only* in the requested JSON format.";
+            const userQuery = `Please explain this like I'm 5: "${currentStatement.statement}" is ${currentStatement.isFact ? 'true' : 'false'} because ${currentStatement.explanation}.`;
+
+            const simpleExplanationSchema = {
+                type: "OBJECT",
+                properties: {
+                    "explanation": { 
+                        type: "STRING", 
+                        description: "A very simple explanation of the fact or fib, suitable for a 5-year-old." 
+                    }
+                },
+                required: ["explanation"]
+            };
+
+            try {
+                const response = await callGeminiAPI(systemPrompt, userQuery, simpleExplanationSchema);
+                const jsonText = response.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(jsonText);
+                
+                // Set text content, but just the text, not the button
+                simpleExplanationText.firstChild.textContent = parsedResult.explanation + ' '; 
+                
+            } catch (error) {
+                console.error('Error fetching simple explanation:', error);
+                // FIX: Write to firstChild.textContent to avoid deleting button
+                simpleExplanationText.firstChild.textContent = 'Oops! Could not get a simpler explanation. ';
+            } finally {
+                isLoading = false;
+                simpleExplanationSpinner.classList.add('hidden');
+                // We keep the button disabled to prevent multiple clicks on the same explanation
+            }
+        }
+
+        // --- NEW FUNCTION: Get Mnemonic ---
+        async function getMnemonic() {
+            if (isLoading) return; // Prevent spamming
+            
+            // Show loading state
+            isLoading = true;
+            mnemonicButton.disabled = true;
+            mnemonicButton.classList.add('opacity-70');
+            mnemonicText.firstChild.textContent = ''; // UPDATED
+            mnemonicArea.classList.remove('hidden');
+            mnemonicSpinner.classList.remove('hidden');
+
+            const systemPrompt = "You are a learning expert. Your job is to create a simple mnemonic, acronym, or memory aid for a given fact. Be creative and concise. Respond *only* in the requested JSON format.";
+            const userQuery = `Generate a simple mnemonic for this fact: "${currentStatement.statement}"`;
+
+            const mnemonicSchema = {
+                type: "OBJECT",
+                properties: {
+                    "mnemonic": { 
+                        type: "STRING", 
+                        description: "A simple mnemonic, acronym, or memory aid for the fact." 
+                    }
+                },
+                required: ["mnemonic"]
+            };
+
+            try {
+                const response = await callGeminiAPI(systemPrompt, userQuery, mnemonicSchema);
+                const jsonText = response.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(jsonText);
+                
+                mnemonicText.firstChild.textContent = parsedResult.mnemonic + ' '; // UPDATED
+                
+            } catch (error) {
+                console.error('Error fetching mnemonic:', error);
+                mnemonicText.firstChild.textContent = 'Oops! Could not generate a memory aid. '; // UPDATED
+            } finally {
+                isLoading = false;
+                mnemonicSpinner.classList.add('hidden');
+                // We keep the button disabled to prevent multiple clicks
+            }
+        }
+
+        // --- NEW FUNCTION: Get Visualization ---
+        async function getVisual() {
+            if (isLoading) return;
+            
+            isLoading = true;
+            visualizeButton.disabled = true;
+            visualizeButton.classList.add('opacity-70');
+            imageGenArea.classList.remove('hidden');
+            imageGenSpinner.classList.remove('hidden');
+            imageGenElement.classList.add('hidden');
+            imageGenError.textContent = '';
+
+            const systemPrompt = "You are an AI image generator. Create a simple, clear, and family-friendly image (illustration, digital art, or photo) that visualizes the provided fact.";
+            const userQuery = `Visualize this fact: "${currentStatement.statement}"`;
+
+            const payload = {
+                contents: [{
+                    parts: [{ text: userQuery }]
+                }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseModalities: ['IMAGE']
+                },
+            };
+
+            try {
+                const response = await retryFetch(imageApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                
+                const base64Data = response?.candidates?.[0]?.content?.parts?.find(p => p.inlineData)?.inlineData?.data;
+                
+                if (base64Data) {
+                    imageGenElement.src = `data:image/png;base64,${base64Data}`;
+                    imageGenElement.classList.remove('hidden');
+                } else {
+                    throw new Error('No image data in response.');
+                }
+
+            } catch (error) {
+                console.error('Error fetching visualization:', error);
+                imageGenError.textContent = 'Oops! Could not create an image.';
+            } finally {
+                isLoading = false;
+                imageGenSpinner.classList.add('hidden');
+                // Keep button disabled
+            }
+        }
+
+        // --- NEW FUNCTION: Get Deeper Dive ---
+        async function getDeeperDive() {
+            if (isLoading) return;
+            
+            isLoading = true;
+            deeperDiveButton.disabled = true;
+            deeperDiveButton.classList.add('opacity-70');
+            deeperDiveArea.classList.remove('hidden');
+            deeperDiveSpinner.classList.remove('hidden');
+            deeperDiveText.firstChild.textContent = ''; // Clear old text
+
+            const systemPrompt = "You are a university professor. A student wants to know more about a specific fact. Provide a detailed, insightful paragraph that gives more context, history, or scientific detail about the provided fact and explanation. Respond *only* in the requested JSON format.";
+            const userQuery = `Fact: "${currentStatement.statement}". Explanation: "${currentStatement.explanation}". Now, give me a deeper dive.`;
+
+            const deeperDiveSchema = {
+                type: "OBJECT",
+                properties: {
+                    "details": { "type": "STRING", "description": "A detailed, in-depth paragraph about the fact." }
+                },
+                required: ["details"]
+            };
+
+            try {
+                const response = await callGeminiAPI(systemPrompt, userQuery, deeperDiveSchema);
+                const jsonText = response.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(jsonText);
+                
+                deeperDiveText.firstChild.textContent = parsedResult.details + ' ';
+
+            } catch (error) {
+                console.error('Error fetching deeper dive:', error);
+                deeperDiveText.firstChild.textContent = 'Oops! Could not get more details. ';
+            } finally {
+                isLoading = false;
+                deeperDiveSpinner.classList.add('hidden');
+                // Keep button disabled
+            }
+        }
+
+
+        // --- "Get More Fun Facts" (Updated) ---
+        async function getMoreFunFacts() {
+            if (isLoading) return;
+            
+            // Show loading state
+            isLoading = true;
+            // Disable all buttons
+            funFactsButton.disabled = true;
+            challengeButton.disabled = true;
+            relatedTopicsButton.disabled = true;
+            funFactsButton.classList.add('opacity-70');
+            challengeButton.classList.add('opacity-70');
+            relatedTopicsButton.classList.add('opacity-70');
+            funFactsButton.textContent = 'Loading Facts...';
+            geminiExtraContent.innerHTML = ''; // Clear old content
+            geminiExtraArea.classList.remove('hidden');
+            geminiExtraSpinner.classList.remove('hidden');
+
+            const systemPrompt = "You are a trivia expert. Provide a list of 3-5 interesting and fun facts about the user's topic. Respond *only* in the requested JSON format.";
+            const userQuery = `Provide 5 fun facts about "${currentTopic}".`;
+            
+            const funFactsSchema = {
+                type: "OBJECT",
+                properties: {
+                    "facts": {
+                        type: "ARRAY",
+                        items: { type: "STRING" },
+                        description: "A list of 3-5 fun facts about the topic."
+                    }
+                },
+                required: ["facts"]
+            };
+
+            try {
+                const response = await callGeminiAPI(systemPrompt, userQuery, funFactsSchema);
+                const jsonText = response.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(jsonText);
+
+                if (parsedResult.facts && parsedResult.facts.length > 0) {
+                    const ul = document.createElement('ul');
+                    ul.className = 'list-disc list-inside space-y-2 text-gray-700';
+                    parsedResult.facts.forEach(fact => {
+                        const li = document.createElement('li');
+                        li.textContent = fact;
+                        ul.appendChild(li);
+                    });
+                    geminiExtraContent.appendChild(ul);
+                } else {
+                    geminiExtraContent.innerHTML = '<p>Could not find any fun facts!</p>';
+                }
+
+            } catch (error)
+            {
+                console.error('Error fetching more fun facts:', error);
+                geminiExtraContent.innerHTML = '<p>Oops! Failed to get more facts.</p>';
+            } finally {
+                isLoading = false;
+                geminiExtraSpinner.classList.add('hidden');
+            }
+        }
+
+        // --- NEW FUNCTION: Get Challenge Question ---
+        async function getChallengeQuestion() {
+            if (isLoading) return;
+            
+            isLoading = true;
+            funFactsButton.disabled = true;
+            challengeButton.disabled = true;
+            relatedTopicsButton.disabled = true;
+            funFactsButton.classList.add('opacity-70');
+            challengeButton.classList.add('opacity-70');
+            relatedTopicsButton.classList.add('opacity-70');
+            challengeButton.textContent = 'Generating...';
+            geminiExtraContent.innerHTML = '';
+            geminiExtraArea.classList.remove('hidden');
+            geminiExtraSpinner.classList.remove('hidden');
+
+            const systemPrompt = "You are a quiz master. Create one challenging, open-ended, thought-provoking question about the user's topic. Respond *only* in the requested JSON format.";
+            const userQuery = `Generate a challenge question about "${currentTopic}".`;
+            
+            const challengeSchema = {
+                type: "OBJECT",
+                properties: { "question": { "type": "STRING" } },
+                required: ["question"]
+            };
+
+            try {
+                const response = await callGeminiAPI(systemPrompt, userQuery, challengeSchema);
+                const jsonText = response.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(jsonText);
+                currentChallengeQuestion = parsedResult.question;
+                
+                geminiExtraSpinner.classList.add('hidden');
+                
+                // Build Challenge UI
+                const questionText = document.createElement('p');
+                questionText.className = 'font-semibold text-lg text-gray-800 mb-3';
+                questionText.textContent = currentChallengeQuestion;
+
+                const answerInput = document.createElement('textarea');
+                answerInput.id = 'challenge-answer-input';
+                answerInput.className = 'w-full px-3 py-2 border border-gray-300 rounded-lg text-base focus:outline-none focus:ring-2 focus:ring-indigo-500';
+                answerInput.placeholder = 'Type your answer here...';
+                answerInput.rows = 4;
+
+                const submitButton = document.createElement('button');
+                submitButton.id = 'challenge-submit-button';
+                submitButton.className = 'w-full mt-2 bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition-all duration-300';
+                submitButton.textContent = 'Submit Answer';
+                submitButton.addEventListener('click', submitChallengeAnswer);
+
+                const feedbackArea = document.createElement('div');
+                feedbackArea.id = 'challenge-feedback-area';
+                feedbackArea.className = 'mt-4 space-y-2';
+
+                geminiExtraContent.append(questionText, answerInput, submitButton, feedbackArea);
+
+            } catch (error) {
+                console.error('Error fetching challenge question:', error);
+                geminiExtraContent.innerHTML = '<p>Oops! Failed to get a challenge.</p>';
+            } finally {
+                isLoading = false;
+                // Spinner is already hidden
+            }
+        }
+        
+        // --- NEW FUNCTION: Get Related Topics ---
+        async function getRelatedTopics() {
+            if (isLoading) return;
+            
+            isLoading = true;
+            funFactsButton.disabled = true;
+            challengeButton.disabled = true;
+            relatedTopicsButton.disabled = true;
+            funFactsButton.classList.add('opacity-70');
+            challengeButton.classList.add('opacity-70');
+            relatedTopicsButton.classList.add('opacity-70');
+            relatedTopicsButton.textContent = 'Finding...';
+            geminiExtraContent.innerHTML = '';
+            geminiExtraArea.classList.remove('hidden');
+            geminiExtraSpinner.classList.remove('hidden');
+
+            const systemPrompt = "You are a librarian and learning guide. Based on the user's topic, suggest a list of 3-5 closely related, interesting topics they might want to learn about next. Respond *only* in the requested JSON format.";
+            const userQuery = `The user just played a game about "${currentTopic}". Suggest 5 related topics.`;
+            
+            const relatedTopicsSchema = {
+                type: "OBJECT",
+                properties: {
+                    "topics": {
+                        type: "ARRAY",
+                        items: { type: "STRING" },
+                        description: "A list of 3-5 related topics."
+                    }
+                },
+                required: ["topics"]
+            };
+
+            try {
+                const response = await callGeminiAPI(systemPrompt, userQuery, relatedTopicsSchema);
+                const jsonText = response.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(jsonText);
+                
+                geminiExtraSpinner.classList.add('hidden');
+
+                if (parsedResult.topics && parsedResult.topics.length > 0) {
+                    const p = document.createElement('p');
+                    p.className = 'font-semibold text-lg text-gray-800 mb-3';
+                    p.textContent = 'Continue your learning:';
+                    
+                    const ul = document.createElement('ul');
+                    ul.className = 'list-disc list-inside space-y-2';
+                    
+                    parsedResult.topics.forEach(topic => {
+                        const li = document.createElement('li');
+                        const button = document.createElement('button');
+                        button.textContent = topic;
+                        button.className = 'text-indigo-600 hover:text-indigo-800 hover:underline text-left';
+                        button.onclick = () => handleRelatedTopicClick(topic);
+                        li.appendChild(button);
+                        ul.appendChild(li);
+                    });
+                    geminiExtraContent.append(p, ul);
+                } else {
+                    geminiExtraContent.innerHTML = '<p>Could not find any related topics!</p>';
+                }
+
+            } catch (error) {
+                console.error('Error fetching related topics:', error);
+                geminiExtraContent.innerHTML = '<p>Oops! Failed to get related topics.</p>';
+            } finally {
+                isLoading = false;
+                // Spinner is already hidden
+            }
+        }
+
+        // --- NEW FUNCTION: Handle Related Topic Click ---
+        function handleRelatedTopicClick(topic) {
+            // Go back to topic screen
+            gameOverScreen.classList.add('hidden');
+            topicScreen.classList.remove('hidden');
+            
+            // Reset the game over screen state
+            geminiExtraArea.classList.add('hidden');
+            geminiExtraContent.innerHTML = '';
+            funFactsButton.disabled = false;
+            challengeButton.disabled = false;
+            relatedTopicsButton.disabled = false;
+            funFactsButton.classList.remove('opacity-70');
+            challengeButton.classList.remove('opacity-70');
+            relatedTopicsButton.classList.remove('opacity-70');
+            funFactsButton.textContent = '✨ Get More Fun Facts!';
+            challengeButton.textContent = '✨ Quick Challenge!';
+            relatedTopicsButton.textContent = '✨ Find Related Topics';
+            
+            // Set new topic and focus
+            topicInput.value = topic;
+            topicInput.focus();
+        }
+
+
+        // --- NEW FUNCTION: Submit Challenge Answer ---
+        async function submitChallengeAnswer() {
+            if (isLoading) return;
+            
+            const answerInput = document.getElementById('challenge-answer-input');
+            const submitButton = document.getElementById('challenge-submit-button');
+            const feedbackArea = document.getElementById('challenge-feedback-area');
+            
+            const answer = answerInput.value.trim();
+            if (answer === '') {
+                feedbackArea.textContent = 'Please enter an answer!';
+                feedbackArea.className = 'mt-4 text-red-500';
+                return;
+            }
+
+            isLoading = true;
+            submitButton.disabled = true;
+            answerInput.disabled = true;
+            submitButton.textContent = 'Evaluating...';
+            feedbackArea.innerHTML = '<div class="spinner mx-auto"></div>';
+
+            const systemPrompt = "You are a helpful tutor. A student was asked a question and gave an answer. Briefly evaluate their answer (is it on the right track?) and then provide a short, comprehensive correct answer to help them learn. Respond *only* in the requested JSON format.";
+            const userQuery = `Question: "${currentChallengeQuestion}".\nAnswer: "${answer}".`;
+            
+            const evaluationSchema = {
+                type: "OBJECT",
+                properties: {
+                    "feedback": { "type": "STRING", "description": "Your brief evaluation of the user's answer." },
+                    "correctAnswer": { "type": "STRING", "description": "A comprehensive correct answer." }
+                },
+                required: ["feedback", "correctAnswer"]
+            };
+
+            try {
+                const response = await callGeminiAPI(systemPrompt, userQuery, evaluationSchema);
+                const jsonText = response.candidates[0].content.parts[0].text;
+                const parsedResult = JSON.parse(jsonText);
+
+                feedbackArea.innerHTML = `
+                    <p><strong class="text-gray-900">Feedback:</strong> ${parsedResult.feedback}</p>
+                    <p class="mt-2"><strong class="text-gray-900">Full Answer:</strong> ${parsedResult.correctAnswer}</p>
+                `;
+                feedbackArea.className = 'mt-4 space-y-2';
+            } catch (error) {
+                console.error('Error evaluating answer:', error);
+                feedbackArea.innerHTML = '<p>Oops! Could not evaluate your answer.</p>';
+            } finally {
+                isLoading = false;
+                submitButton.textContent = 'Answer Submitted';
+                // Button remains disabled
+            }
+        }
+
+        // --- NEW TTS Functions ---
+        
+        /**
+         * Handles a click on any speaker button.
+         */
+        function handleSpeakRequest(event) {
+            if (isSpeaking) {
+                // Stop current audio if playing
+                if (currentAudio) {
+                    currentAudio.pause();
+                    currentAudio.currentTime = 0;
+                }
+                isSpeaking = false;
+                allSpeakerButtons.forEach(btn => btn.classList.remove('speaking'));
+                
+                // If the user clicked the *same* button, just stop.
+                if (event.currentTarget.classList.contains('was-speaking')) {
+                     event.currentTarget.classList.remove('was-speaking');
+                     return;
+                }
+            }
+
+            const button = event.currentTarget;
+            const textElementId = button.dataset.textId;
+            let textToSpeak = '';
+
+            // UPDATED: Check for text content vs firstChild.textContent
+            if (textElementId === 'statementText') { // 'mnemonic-text' removed
+                textToSpeak = document.getElementById(textElementId).textContent;
+            } else if (textElementId === 'simple-explanation-text' || textElementId === 'feedback-explanation' || textElementId === 'deeper-dive-text' || textElementId === 'mnemonic-text') { // 'mnemonic-text' added
+                // These elements have a speaker button inside, so we only grab the text node
+                textToSpeak = document.getElementById(textElementId).firstChild.textContent;
+            }
+
+            if (textToSpeak.trim()) {
+                button.classList.add('speaking', 'was-speaking');
+                isSpeaking = true;
+                playAudio(textToSpeak.trim(), 'Kore');
+            }
+        }
+
+        /**
+         * Calls the Gemini TTS API and plays the audio.
+         */
+        async function playAudio(text, voice = 'Kore') {
+            const payload = {
+                contents: [{
+                    parts: [{ text: `Say this clearly: ${text}` }]
+                }],
+                generationConfig: {
+                    responseModalities: ["AUDIO"],
+                    speechConfig: {
+                        voiceConfig: {
+                            prebuiltVoiceConfig: { voiceName: voice }
+                        }
+                    }
+                },
+                model: "gemini-2.5-flash-preview-tts"
+            };
+
+            try {
+                const response = await retryFetch(ttsApiUrl, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                const part = response?.candidates?.[0]?.content?.parts?.[0];
+                const audioData = part?.inlineData?.data;
+                const mimeType = part?.inlineData?.mimeType; // e.g., "audio/L16;rate=24000"
+
+                if (audioData && mimeType && mimeType.startsWith("audio/")) {
+                    const sampleRateMatch = mimeType.match(/rate=(\d+)/);
+                    const sampleRate = sampleRateMatch ? parseInt(sampleRateMatch[1], 10) : 24000; // Default to 24kHz
+
+                    const pcmData = base64ToArrayBuffer(audioData);
+                    const pcm16 = new Int16Array(pcmData);
+                    const wavBlob = pcmToWav(pcm16, sampleRate);
+                    const audioUrl = URL.createObjectURL(wavBlob);
+                    
+                    if (currentAudio) {
+                        currentAudio.pause();
+                    }
+                    
+                    currentAudio = new Audio(audioUrl);
+                    currentAudio.play();
+                    
+                    currentAudio.onended = () => {
+                        isSpeaking = false;
+                        allSpeakerButtons.forEach(btn => btn.classList.remove('speaking', 'was-speaking'));
+                        URL.revokeObjectURL(audioUrl); // Clean up
+                    };
+                    
+                } else {
+                    throw new Error("Invalid TTS response format.");
+                }
+
+            } catch (error) {
+                console.error("Error playing audio:", error);
+                isSpeaking = false;
+                allSpeakerButtons.forEach(btn => btn.classList.remove('speaking', 'was-speaking'));
+            }
+        }
+
+        /**
+         * Converts Base64 string to ArrayBuffer.
+         */
+        function base64ToArrayBuffer(base64) {
+            const binaryString = window.atob(base64);
+            const len = binaryString.length;
+            const bytes = new Uint8Array(len);
+            for (let i = 0; i < len; i++) {
+                bytes[i] = binaryString.charCodeAt(i);
+            }
+            return bytes.buffer;
+        }
+
+        /**
+         * Converts raw PCM16 data to a WAV Blob.
+         */
+        function pcmToWav(pcmData, sampleRate) {
+            const numChannels = 1;
+            const bitsPerSample = 16;
+            const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+            const blockAlign = numChannels * (bitsPerSample / 8);
+            const dataSize = pcmData.length * (bitsPerSample / 8);
+            const buffer = new ArrayBuffer(44 + dataSize);
+            const view = new DataView(buffer);
+
+            // RIFF header
+            writeString(view, 0, 'RIFF');
+            view.setUint32(4, 36 + dataSize, true);
+            writeString(view, 8, 'WAVE');
+            // 'fmt ' sub-chunk
+            writeString(view, 12, 'fmt ');
+            view.setUint32(16, 16, true); // Sub-chunk size (16 for PCM)
+            view.setUint16(20, 1, true); // Audio format (1 for PCM)
+            view.setUint16(22, numChannels, true);
+            view.setUint32(24, sampleRate, true);
+            view.setUint32(28, byteRate, true);
+            view.setUint16(32, blockAlign, true);
+            view.setUint16(34, bitsPerSample, true);
+            // 'data' sub-chunk
+            writeString(view, 36, 'data');
+            view.setUint32(40, dataSize, true);
+
+            // Write PCM data
+            for (let i = 0; i < pcmData.length; i++) {
+                view.setInt16(44 + i * 2, pcmData[i], true);
+            }
+
+            return new Blob([view], { type: 'audio/wav' });
+        }
+
+        function writeString(view, offset, string) {
+            for (let i = 0; i < string.length; i++) {
+                view.setUint8(offset + i, string.charCodeAt(i));
+            }
+        }
+
+
+        // --- Game Logic ---
+        function startGame() {
+            currentTopic = topicInput.value.trim();
+            if (currentTopic === '') {
+                topicError.textContent = 'Please enter a topic!';
+                topicInput.classList.add('wiggle');
+                setTimeout(() => topicInput.classList.remove('wiggle'), 300);
+                return;
+            }
+            
+            topicError.textContent = '';
+            score = 0;
+            lives = 3;
+            streak = 0;
+            updateStats();
+            
+            topicDisplay.textContent = currentTopic;
+            topicScreen.classList.add('hidden');
+            gameOverScreen.classList.add('hidden');
+            gameScreen.classList.remove('hidden');
+            
+            getNewStatement();
+        }
+        
+        async function getNewStatement() {
+            setLoading(true);
+            feedbackArea.classList.add('hidden');
+            
+            // Stop any speaking
+            if (currentAudio) currentAudio.pause();
+            isSpeaking = false;
+            allSpeakerButtons.forEach(btn => btn.classList.remove('speaking', 'was-speaking'));
+            
+            // Hide simple explanation, mnemonic, and deeper dive areas
+            simpleExplanationArea.classList.add('hidden');
+            mnemonicArea.classList.add('hidden');
+            imageGenArea.classList.add('hidden'); // New
+            deeperDiveArea.classList.add('hidden'); // New
+            simpleExplanationText.firstChild.textContent = ''; // Clear text
+            mnemonicText.firstChild.textContent = ''; // UPDATED
+            deeperDiveText.firstChild.textContent = ''; // Clear text
+            imageGenElement.src = ''; // Clear image
+            imageGenError.textContent = '';
+            
+            mnemonicButton.classList.add('hidden');
+            visualizeButton.classList.add('hidden'); // New
+            deeperDiveButton.classList.add('hidden'); // New
+            speakStatementButton.classList.add('hidden'); // New
+            
+            statementText.textContent = '';
+            
+            // Randomly decide whether to ask for a fact or a fib
+            const requestType = Math.random() < 0.5 ? "fact" : "fib";
+            
+            const systemPrompt = `You are a game master for 'Fact or Flash-Fib'. Your role is to generate a single, plausible-sounding statement about the user's topic. You will be told to generate either a 'fact' or a 'fib'.
+- If it's a 'fact', it must be true and verifiable.
+- If it's a 'fib', it must be believable but ultimately incorrect.
+- Provide a brief, one-sentence explanation for the answer.
+- Respond *only* in the requested JSON format.`;
+            
+            const userQuery = `Topic: "${currentTopic}". Generate a ${requestType}.`;
+
+            try {
+                const response = await callGeminiAPI(systemPrompt, userQuery, geminiSchema);
+                const jsonText = response.candidates[0].content.parts[0].text;
+                currentStatement = JSON.parse(jsonText);
+                
+                statementText.textContent = currentStatement.statement;
+                speakStatementButton.classList.remove('hidden'); // Show speaker button
+                setLoading(false);
+
+            } catch (error) {
+                console.error('Error fetching statement:', error);
+                statementText.textContent = 'Oops! Could not load a statement. Please try again.';
+                // In a real app, we'd offer a retry button
+                setLoading(false);
+            }
+        }
+
+        function checkAnswer(userGuess) {
+            if (isLoading) return;
+            
+            const isCorrect = userGuess === currentStatement.isFact;
+            
+            if (isCorrect) {
+                streak++;
+                const points = 10 * streak;
+                score += points;
+                feedbackTitle.textContent = `Correct! +${points}pts`;
+                feedbackTitle.className = 'text-3xl font-bold text-green-600';
+            } else {
+                lives--;
+                streak = 0;
+                feedbackTitle.textContent = 'Wrong!';
+                feedbackTitle.className = 'text-3xl font-bold text-red-600';
+            }
+            
+            feedbackExplanation.firstChild.textContent = currentStatement.explanation + ' ';
+            updateStats();
+            
+            // Reset and show the simple explanation button
+            explainSimpleButton.disabled = false;
+            explainSimpleButton.classList.remove('opacity-70');
+            simpleExplanationArea.classList.add('hidden'); // Hide old explanation
+            
+            // Reset and show/hide the mnemonic button
+            mnemonicButton.disabled = false;
+            mnemonicButton.classList.remove('opacity-70');
+            mnemonicArea.classList.add('hidden');
+            
+            // NEW: Reset and show/hide the visualize button
+            visualizeButton.disabled = false;
+            visualizeButton.classList.remove('opacity-70');
+            imageGenArea.classList.add('hidden');
+
+            // NEW: Reset and show/hide the deeper dive button
+            deeperDiveButton.disabled = false;
+            deeperDiveButton.classList.remove('opacity-70');
+            deeperDiveArea.classList.add('hidden');
+            
+            if (currentStatement.isFact) {
+                mnemonicButton.classList.remove('hidden');
+                visualizeButton.classList.remove('hidden'); // Show for facts
+                deeperDiveButton.classList.remove('hidden'); // Show for facts
+            } else {
+                mnemonicButton.classList.add('hidden');
+                visualizeButton.classList.add('hidden'); // Hide for fibs
+                deeperDiveButton.classList.add('hidden'); // Hide for fibs
+            }
+            
+            buttonContainer.classList.add('hidden');
+            feedbackArea.classList.remove('hidden');
+            
+            if (lives <= 0) {
+                setTimeout(gameOver, 2000);
+            }
+        }
+        
+        function gameOver() {
+            finalScore.textContent = score;
+            gameScreen.classList.add('hidden');
+            gameOverScreen.classList.remove('hidden');
+            
+            // Stop any speaking
+            if (currentAudio) currentAudio.pause();
+            isSpeaking = false;
+            allSpeakerButtons.forEach(btn => btn.classList.remove('speaking', 'was-speaking'));
+        }
+
+        function resetGame() {
+            gameOverScreen.classList.add('hidden');
+            topicScreen.classList.remove('hidden');
+            topicInput.value = '';
+            
+            // Reset "Gemini Extra" area
+            geminiExtraArea.classList.add('hidden');
+            geminiExtraContent.innerHTML = '';
+            funFactsButton.disabled = false;
+            challengeButton.disabled = false;
+            relatedTopicsButton.disabled = false;
+            funFactsButton.classList.remove('opacity-70');
+            challengeButton.classList.remove('opacity-70');
+            relatedTopicsButton.classList.remove('opacity-70');
+            funFactsButton.textContent = '✨ Get More Fun Facts!';
+            challengeButton.textContent = '✨ Quick Challenge!';
+            relatedTopicsButton.textContent = '✨ Find Related Topics';
+            currentChallengeQuestion = '';
+            
+            // Stop any speaking
+            if (currentAudio) currentAudio.pause();
+            isSpeaking = false;
+            allSpeakerButtons.forEach(btn => btn.classList.remove('speaking', 'was-speaking'));
+            
+            topicInput.focus();
+        }
+        
+        function updateStats() {
+            scoreDisplay.textContent = score;
+            livesDisplay.textContent = lives;
+        }
+
+        function setLoading(loading) {
+            isLoading = loading;
+            if (loading) {
+                loadingSpinner.classList.remove('hidden');
+                buttonContainer.classList.add('hidden');
+                feedbackArea.classList.add('hidden');
+                statementText.classList.add('hidden');
+                speakStatementButton.classList.add('hidden'); // New
+            } else {
+                loadingSpinner.classList.add('hidden');
+                buttonContainer.classList.remove('hidden');
+                statementText.classList.remove('hidden');
+                // Don't show speaker button until text is loaded (handled in getNewStatement)
+            }
+        }
+
+        /**
+         * Retries a fetch request with exponential backoff.
+         */
+        async function retryFetch(url, options, retries = 5, delay = 1000) {
+            for (let i = 0; i < retries; i++) {
+                try {
+                    const response = await fetch(url, options);
+                    if (response.ok) {
+                        return response.json();
+                    }
+                    if (response.status === 429) { // Too Many Requests
+                        console.warn(`Rate limited. Retrying in ${delay / 1000}s...`);
+                        await new Promise(res => setTimeout(res, delay));
+                        delay *= 2; // Exponential backoff
+                    } else {
+                        // For other errors, throw to be caught by the caller
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                } catch (error) {
+                    if (i === retries - 1) throw error; // Re-throw last error
+                    console.warn(`Fetch attempt ${i + 1} failed. Retrying...`);
+                    await new Promise(res => setTimeout(res, delay));
+                    delay *= 2;
+                }
+            }
+        }
+        
+        /**
+         * Calls the Gemini API with the specified prompts and schema.
+         */
+        async function callGeminiAPI(systemPrompt, userQuery, schema) {
+            const payload = {
+                contents: [{
+                    parts: [{ text: userQuery }]
+                }],
+                systemInstruction: {
+                    parts: [{ text: systemPrompt }]
+                },
+                generationConfig: {
+                    responseMimeType: "application/json",
+                    responseSchema: schema,
+                    temperature: 1.0, // Higher temperature for more creative "fibs"
+                    topK: 40,
+                    topP: 0.95,
+                },
+            };
+            
+            const response = await retryFetch(textApiUrl, { // Use textApiUrl
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(payload)
+            });
+            
+            return response;
+        }
+
+    </script>
+</body>
+</html>
